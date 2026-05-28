@@ -149,7 +149,21 @@ Create a PostgreSQL database named `product_segmentation` and run your database 
 ### **2. Install Dependencies**
 
 ```bash
-pip install pandas numpy scikit-learn psycopg2 sqlalchemy matplotlib seaborn streamlit plotly
+pip install pandas numpy scikit-learn psycopg2 sqlalchemy matplotlib seaborn streamlit plotly python-dotenv
+```
+
+---
+
+### **3. Configure Environment Variables**
+
+Create a `.env` file in the root of the project folder:
+
+```env
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=product_segmentation
+DB_USER=postgres
+DB_PASSWORD=your_postgres_password
 ```
 
 ---
