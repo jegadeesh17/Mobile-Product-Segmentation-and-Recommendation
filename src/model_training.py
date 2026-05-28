@@ -1,6 +1,6 @@
 import pandas as pd
 import pickle
-from sqlalchemy import create_engine
+from db_config import get_engine
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
 from pathlib import Path
@@ -8,7 +8,7 @@ from pathlib import Path
 print("Running Model Training...")
 
 # 1. Fetch product features from PostgreSQL
-engine = create_engine('postgresql://postgres:jaundice@localhost:5432/product_segmentation')
+engine = get_engine()
 product_df = pd.read_sql('SELECT * FROM product_features', engine)
 
 # 2. Select features for segmentation

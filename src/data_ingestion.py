@@ -1,5 +1,5 @@
 import pandas as pd
-from sqlalchemy import create_engine
+from db_config import get_engine
 from pathlib import Path
 
 # Build path to data folder relative to this script
@@ -13,6 +13,6 @@ df = pd.read_csv(csv_path)
 df['review_date'] = pd.to_datetime(df['review_date']).dt.date
 
 # Connect and write to PostgreSQL
-engine = create_engine('postgresql://postgres:jaundice@localhost:5432/product_segmentation')
+engine = get_engine()
 df.to_sql('raw_mobile_reviews', engine, if_exists='replace', index=False)
 print("Data ingestion complete!")

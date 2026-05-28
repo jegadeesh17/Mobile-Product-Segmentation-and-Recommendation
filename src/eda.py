@@ -1,12 +1,12 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sqlalchemy import create_engine
+from db_config import get_engine
 
 print("Running Exploratory Data Analysis (EDA)...")
 
 # 1. Fetch cleaned data from PostgreSQL
-engine = create_engine('postgresql://postgres:jaundice@localhost:5432/product_segmentation')
+engine = get_engine()
 df = pd.read_sql('SELECT * FROM cleaned_mobile_reviews', engine)
 
 # 2. Correlation Heatmap for Specification Features

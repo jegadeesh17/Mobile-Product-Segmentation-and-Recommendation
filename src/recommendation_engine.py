@@ -1,6 +1,6 @@
 import pandas as pd
 import pickle
-from sqlalchemy import create_engine
+from db_config import get_engine
 from sklearn.metrics.pairwise import cosine_similarity
 from pathlib import Path
 
@@ -9,7 +9,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # 1. Fetch segmented products from PostgreSQL (fallback to CSV if DB is unavailable)
 try:
-    engine = create_engine('postgresql://postgres:jaundice@localhost:5432/product_segmentation')
+    engine = get_engine()
     product_df = pd.read_sql('SELECT * FROM segmented_products', engine)
 except Exception:
     # Fallback to local CSV

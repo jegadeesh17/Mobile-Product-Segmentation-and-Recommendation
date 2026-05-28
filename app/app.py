@@ -17,8 +17,8 @@ st.title("📱 Mobile Product Segmentation & Recommendation Engine")
 
 # Load your precomputed aggregated product_df (fallback to local CSV if DB is down)
 try:
-    from sqlalchemy import create_engine
-    engine = create_engine('postgresql://postgres:jaundice@localhost:5432/product_segmentation')
+    from db_config import get_engine
+    engine = get_engine()
     product_df = pd.read_sql('SELECT * FROM segmented_products', engine)
 except Exception:
     product_df = pd.read_csv(PROJECT_ROOT / 'data' / 'segmented_products.csv')

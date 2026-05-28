@@ -1,10 +1,10 @@
 import pandas as pd
-from sqlalchemy import create_engine
+from db_config import get_engine
 
 print("Running Feature Engineering...")
 
 # 1. Fetch cleaned data from PostgreSQL
-engine = create_engine('postgresql://postgres:jaundice@localhost:5432/product_segmentation')
+engine = get_engine()
 df = pd.read_sql('SELECT * FROM cleaned_mobile_reviews', engine)
 
 # 2. Create a comprehensive composite specifications score
