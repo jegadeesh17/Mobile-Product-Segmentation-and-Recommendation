@@ -10,7 +10,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT / 'src') not in sys.path:
     sys.path.append(str(PROJECT_ROOT / 'src'))
 
-from recommendation_engine import get_recommendations
+from recommendation_engine import get_recommendations, get_custom_recommendations
 
 st.set_page_config(layout="wide", page_title="Telecom Device Intelligence App")
 st.title("📱 Mobile Product Segmentation & Recommendation Engine")
@@ -113,31 +113,73 @@ elif menu == "Segment Explorer":
 
 elif menu == "Similar Device Alternatives":
     st.subheader("🎯 Intelligent Device Alternatives")
-    st.write("Select a phone model to find high-performing alternatives within the same budget tier.")
+    st.write("Find high-performing alternatives within your preferred budget tier or by matching a specific model.")
     
-    selected_phone = st.selectbox("Select a Smartphone Model:", product_df['model'].unique())
+    tab1, tab2 = st.tabs(["By Phone Model", "By Custom Features"])
     
-    # Show characteristics of the selected phone
-    selected_info = product_df[product_df['model'] == selected_phone].iloc[0]
-    st.markdown(
-        f"**Selected Model details:** Price: `${selected_info['avg_price']:,.2f}` | "
-        f"Rating: `{selected_info['avg_rating']:.2f}` | "
-        f"Specs: `{selected_info['avg_specs_score']:.2f}` | "
-        f"Segment: **{selected_info['cluster_name']}**"
-    )
-    
-    if st.button("Generate Tailored Recommendations"):
-        recommendations = get_recommendations(selected_phone)
-        if recommendations is not None and not recommendations.empty:
-            st.write("### Recommended Alternatives:")
+    with tab1:
+        st.write("Select a phone model to find high-performing alternatives.")
+        
+        selected_phone = st.selectbox("Select a Smartphone Model:", product_df['model'].unique())
+        
+        # Show characteristics of the selected phone
+        selected_info = product_df[product_df['model'] == selected_phone].iloc[0]
+        st.markdown(
+            f"**Selected Model details:** Price: `${selected_info['avg_price']:,.2f}` | "
+            f"Rating: `{selected_info['avg_rating']:.2f}` | "
+            f"Specs: `{selected_info['avg_specs_score']:.2f}` | "
+            f"Segment: **{selected_info['cluster_name']}**"
+        )
+        
+        if st.button("Generate Tailored Recommendations"):
+            recommendations = get_recommendations(selected_phone)
+            if recommendations is not None and not recommendations.empty:
+                st.write("### Recommended Alternatives:")
+                
+                # Format display df
+                display_recs = recommendations.copy()
+                display_recs['avg_price'] = display_recs['avg_price'].map(lambda x: f"${x:,.2f}")
+                display_recs['avg_rating'] = display_recs['avg_rating'].map(lambda x: f"{x:.2f} / 5.0")
+                display_recs.columns = ['Brand', 'Model', 'Average Price', 'User Rating', 'Segment']
+                
+                st.dataframe(display_recs, use_container_width=True)
+            else:
+                st.error("No recommendations could be found for this device.")
+
+    with tab2:
+        st.write("Define your ideal phone specs to find the closest matches.")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            user_price = st.slider("Target Price ($)", 
+                                   min_value=float(product_df['avg_price'].min()), 
+                                   max_value=float(product_df['avg_price'].max()), 
+                                   value=float(product_df['avg_price'].mean()))
+            user_rating = st.slider("Target Rating (out of 5)", 
+                                    min_value=float(product_df['avg_rating'].min()), 
+                                    max_value=float(product_df['avg_rating'].max()), 
+                                    value=float(product_df['avg_rating'].mean()))
+        with col2:
+            user_specs = st.slider("Target Specs Score (out of 3)", 
+                                   min_value=float(product_df['avg_specs_score'].min()), 
+                                   max_value=float(product_df['avg_specs_score'].max()), 
+                                   value=float(product_df['avg_specs_score'].mean()))
+            user_sentiment = st.slider("Target Positive Sentiment (%)", 
+                                       min_value=float(product_df['positive_sentiment_ratio'].min()), 
+                                       max_value=float(product_df['positive_sentiment_ratio'].max()), 
+                                       value=float(product_df['positive_sentiment_ratio'].mean()))
             
-            # Format display df
-            display_recs = recommendations.copy()
-            # price_tier drop removed because we don't return it anymore
-            display_recs['avg_price'] = display_recs['avg_price'].map(lambda x: f"${x:,.2f}")
-            display_recs['avg_rating'] = display_recs['avg_rating'].map(lambda x: f"{x:.2f} / 5.0")
-            display_recs.columns = ['Brand', 'Model', 'Average Price', 'User Rating', 'Segment']
-            
-            st.dataframe(display_recs, use_container_width=True)
-        else:
-            st.error("No recommendations could be found for this device.")
+        if st.button("Generate Custom Recommendations"):
+            recommendations = get_custom_recommendations(user_price, user_rating, user_specs, user_sentiment)
+            if recommendations is not None and not recommendations.empty:
+                st.write("### Recommended Alternatives:")
+                
+                # Format display df
+                display_recs = recommendations.copy()
+                display_recs['avg_price'] = display_recs['avg_price'].map(lambda x: f"${x:,.2f}")
+                display_recs['avg_rating'] = display_recs['avg_rating'].map(lambda x: f"{x:.2f} / 5.0")
+                display_recs.columns = ['Brand', 'Model', 'Average Price', 'User Rating', 'Segment']
+                
+                st.dataframe(display_recs, use_container_width=True)
+            else:
+                st.error("No recommendations could be found.")

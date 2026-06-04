@@ -73,3 +73,31 @@ def get_recommendations(model_name, top_n=5):
     
     # Sort by similarity score inherently handled by the recommendation ordering
     return res_df
+
+import numpy as np
+
+def get_custom_recommendations(price, rating, specs, sentiment, top_n=5):
+    """
+    Get recommendations based on custom user-defined values rather than an existing phone.
+    """
+    # Create input feature array (must match the order of `features` list)
+    # features = ['avg_price', 'avg_rating', 'avg_specs_score', 'positive_sentiment_ratio']
+    input_features = np.array([[price, rating, specs, sentiment]])
+    input_scaled = scaler.transform(input_features)
+    
+    # Calculate cosine similarity with all existing scaled products
+    sim_scores = cosine_similarity(input_scaled, X_scaled)[0]
+    
+    # Enumerate and sort by similarity score in descending order
+    sim_scores_list = list(enumerate(sim_scores))
+    sim_scores_list = sorted(sim_scores_list, key=lambda x: x[1], reverse=True)[:top_n]
+    
+    # Extract phone details
+    recommended_indices = [item[0] for item in sim_scores_list]
+    
+    if not recommended_indices:
+        return pd.DataFrame(columns=['brand', 'model', 'avg_price', 'avg_rating', 'cluster_name'])
+        
+    res_df = product_df.iloc[recommended_indices][['brand', 'model', 'avg_price', 'avg_rating', 'cluster_name']].copy()
+    
+    return res_df
