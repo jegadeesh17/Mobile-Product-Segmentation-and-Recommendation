@@ -36,7 +36,46 @@ if menu == "Market Segmentation":
     st.plotly_chart(fig, use_container_width=True)
     
     st.write("### Cluster Insights Table")
-    st.dataframe(product_df.groupby('cluster_name').mean(numeric_only=True))
+    # Compute mean and format it elegantly using st.column_config
+    cluster_stats = product_df.groupby('cluster_name').mean(numeric_only=True).reset_index()
+    
+    st.dataframe(
+        cluster_stats,
+        column_config={
+            "cluster_name": st.column_config.TextColumn(
+                "Segment Name", 
+                width="medium"
+            ),
+            "avg_price": st.column_config.NumberColumn(
+                "Average Price",
+                help="Average price of phones in USD",
+                format="$ %.2f",
+            ),
+            "avg_rating": st.column_config.NumberColumn(
+                "Average Rating",
+                help="Average user rating (out of 5.0)",
+                format="%.2f ⭐",
+            ),
+            "avg_specs_score": st.column_config.NumberColumn(
+                "Avg Specs Score",
+                help="Average specification score (out of 3.0)",
+                format="%.2f",
+            ),
+            "total_reviews": st.column_config.NumberColumn(
+                "Total Reviews",
+                help="Average number of reviews",
+                format="%d",
+            ),
+            "positive_sentiment_ratio": st.column_config.NumberColumn(
+                "Positive Sentiment",
+                help="Ratio of positive reviews",
+                format="%.2f",
+            ),
+            "cluster": None, # Hide the internal cluster ID column
+        },
+        hide_index=True,
+        use_container_width=True
+    )
 
 elif menu == "Segment Explorer":
     st.subheader("🔍 ML-Driven Segment Explorer")
