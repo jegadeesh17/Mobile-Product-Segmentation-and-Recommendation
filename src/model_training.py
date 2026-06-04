@@ -3,95 +3,140 @@ import pickle
 from db_config import get_engine
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+import matplotlib.pyplot as plt
 from pathlib import Path
 
 print("Running Model Training...")
 
-# 1. Fetch product features from PostgreSQL
-engine = get_engine()
-product_df = pd.read_sql('SELECT * FROM product_features', engine)
-
+# 1. Fetch product features from PostgreSQL (fallback to CSV)
+try:
+    engine = get_engine()
+    product_df = pd.read_sql('SELECT * FROM product_features', engine)
+except Exception as e:
+    print(f"Database connection failed: {e}. Falling back to CSV.")
+    PROJECT_ROOT = Path(__file__).resolve().parent.parent
+    product_df = pd.read_csv(PROJECT_ROOT / 'data' / 'segmented_products.csv')
 # 2. Select features for segmentation
 features = ['avg_price', 'avg_rating', 'avg_specs_score', 'positive_sentiment_ratio']
 X = product_df[features]
 
-# 3. Create two scalers: one for recommendations (4 features) and one for quality (3 features)
+# 3. Standardize all 4 features
 scaler = StandardScaler()
-scaler.fit(X)  # Fit on all 4 features (for compatibility with recommendation similarity)
+X_scaled = scaler.fit_transform(X)
 
-# Quality scaler (3 features: rating, specs, sentiment ratio)
-quality_features = ['avg_rating', 'avg_specs_score', 'positive_sentiment_ratio']
-quality_scaler = StandardScaler()
-X_quality_scaled = quality_scaler.fit_transform(product_df[quality_features])
+# 4. Find the optimal number of clusters using Silhouette Score and Elbow Method
+print("Evaluating optimal number of clusters (Elbow & Silhouette)...")
+best_k = 4
+best_score = -1
 
-# 4. Fit 2-cluster KMeans for quality segmentation (High vs Low Quality)
-kmeans = KMeans(n_clusters=2, random_state=42, n_init=10)
-product_df['quality_cluster'] = kmeans.fit_predict(X_quality_scaled)
+wcss = []
+silhouette_scores = []
+k_range = range(3, 11)
 
-# Identify which cluster index is High Quality vs Low Quality
-cluster_0_mean = product_df[product_df['quality_cluster'] == 0]['avg_rating'].mean()
-cluster_1_mean = product_df[product_df['quality_cluster'] == 1]['avg_rating'].mean()
-high_quality_cluster = 0 if cluster_0_mean > cluster_1_mean else 1
+for k in k_range:
+    temp_kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
+    temp_labels = temp_kmeans.fit_predict(X_scaled)
+    
+    # WCSS (Inertia) for Elbow
+    wcss.append(temp_kmeans.inertia_)
+    
+    # Silhouette
+    score = silhouette_score(X_scaled, temp_labels)
+    silhouette_scores.append(score)
+    print(f"  k={k}, WCSS: {temp_kmeans.inertia_:.2f}, Silhouette: {score:.4f}")
+    
+    if score > best_score:
+        best_score = score
+        best_k = k
 
-product_df['quality_label'] = product_df['quality_cluster'].apply(
-    lambda x: 'High Quality' if x == high_quality_cluster else 'Low Quality'
-)
+print(f"Optimal number of clusters chosen: {best_k} (Silhouette Score: {best_score:.4f})")
 
-# 5. Classify price tiers
-def get_price_tier(price):
-    if price >= 1000:
-        return 'Premium'
-    elif price >= 500:
-        return 'Mid-Range'
+# Generate Plot
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+fig, ax1 = plt.subplots(figsize=(10, 5))
+
+color = 'tab:red'
+ax1.set_xlabel('Number of Clusters (k)')
+ax1.set_ylabel('WCSS (Elbow Method)', color=color)
+ax1.plot(k_range, wcss, marker='o', color=color)
+ax1.tick_params(axis='y', labelcolor=color)
+
+ax2 = ax1.twinx()  
+color = 'tab:blue'
+ax2.set_ylabel('Silhouette Score', color=color)
+ax2.plot(k_range, silhouette_scores, marker='s', color=color)
+ax2.tick_params(axis='y', labelcolor=color)
+
+# Highlight best K
+ax2.axvline(x=best_k, color='green', linestyle='--', label=f'Best k={best_k}')
+fig.tight_layout()
+plt.title('Optimal K Analysis: Elbow Method vs Silhouette Score')
+plt.savefig(PROJECT_ROOT / 'reports' / 'figures' / 'optimal_k_analysis.png', bbox_inches='tight')
+plt.close()
+
+# 5. Fit Final KMeans with optimal K
+kmeans = KMeans(n_clusters=best_k, random_state=42, n_init=10)
+product_df['cluster'] = kmeans.fit_predict(X_scaled)
+
+# 6. Dynamically Name Clusters based on Centroids
+# We will compute the mean price and specs for each cluster to label them
+cluster_profiles = product_df.groupby('cluster')[features].mean().reset_index()
+
+def assign_dynamic_name(row):
+    # Basic heuristic based on percentiles of the cluster means
+    # For a truly dynamic naming, we rank the clusters by price and specs
+    return f"Segment_{int(row['cluster'])}"
+
+# Let's do a relative ranking of clusters
+cluster_profiles['price_rank'] = cluster_profiles['avg_price'].rank()
+cluster_profiles['spec_rank'] = cluster_profiles['avg_specs_score'].rank()
+
+cluster_names = {}
+for _, row in cluster_profiles.iterrows():
+    c = int(row['cluster'])
+    pr = row['price_rank']
+    sr = row['spec_rank']
+    
+    # Simple heuristic to name the segments
+    if pr >= best_k * 0.75:
+        name = "Premium Flagships"
+    elif pr <= best_k * 0.35 and sr <= best_k * 0.5:
+        name = "Budget Workhorses"
+    elif pr <= best_k * 0.5 and sr > best_k * 0.5:
+        name = "High-Value Mid-Range"
     else:
-        return 'Budget'
+        name = "Standard Mid-Range"
+        
+    # Ensure unique names if collisions occur
+    if name in cluster_names.values():
+        name = f"{name} (Tier {c})"
+        
+    cluster_names[c] = name
 
-product_df['price_tier'] = product_df['avg_price'].apply(get_price_tier)
-
-# Apply Hybrid Logic for final Business Persona Mapping
-def get_hybrid_cluster_name(row):
-    if row['quality_label'] == 'Low Quality':
-        return 'Underperformers'
-    else:
-        if row['price_tier'] == 'Premium':
-            return 'Premium Flagships'
-        elif row['price_tier'] == 'Mid-Range':
-            return 'Mid-Range Value'
-        else:
-            return 'Budget Workhorses'
-
-product_df['cluster_name'] = product_df.apply(get_hybrid_cluster_name, axis=1)
-
-# Maintain numerical 'cluster' mapping for reverse compatibility:
-# 0: Budget Workhorses, 1: Underperformers, 2: Premium Flagships, 3: Mid-Range Value
-CLUSTER_INT_MAPPING = {
-    'Budget Workhorses': 0,
-    'Underperformers': 1,
-    'Premium Flagships': 2,
-    'Mid-Range Value': 3
-}
-product_df['cluster'] = product_df['cluster_name'].map(CLUSTER_INT_MAPPING)
-
-# Clean up helper columns before saving to keep database clean
-product_df = product_df.drop(columns=['quality_cluster'])
+product_df['cluster_name'] = product_df['cluster'].map(cluster_names)
 
 # Show cluster profiles with business names
-cluster_profiles = product_df.groupby('cluster_name')[features].mean()
-print("Cluster Profiles (Mean values of features per cluster):")
-print(cluster_profiles)
-
+final_profiles = product_df.groupby('cluster_name')[features].mean()
+print("\nCluster Profiles (Mean values of features per cluster):")
+print(final_profiles)
+    
 # 6. Save models/artifacts to disk using pickle
 # Get the project root folder to save models and CSV
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
-with open(PROJECT_ROOT / 'scaler.pkl', 'wb') as f:
+with open(PROJECT_ROOT / 'models' / 'scaler.pkl', 'wb') as f:
     pickle.dump(scaler, f)
 
-with open(PROJECT_ROOT / 'kmeans.pkl', 'wb') as f:
+with open(PROJECT_ROOT / 'models' / 'kmeans.pkl', 'wb') as f:
     pickle.dump(kmeans, f)
 
 # 7. Save clustered product data back to PostgreSQL and a CSV in the data folder
-product_df.to_sql('segmented_products', engine, if_exists='replace', index=False)
+try:
+    product_df.to_sql('segmented_products', engine, if_exists='replace', index=False)
+except Exception as e:
+    print(f"Warning: Could not save to database ({e}).")
+
 product_df.to_csv(PROJECT_ROOT / 'data' / 'segmented_products.csv', index=False)
 
 print("Model training complete! Scaler and KMeans models saved. Segmented products saved to database and CSV.")

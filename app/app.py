@@ -25,52 +25,37 @@ except Exception:
 
 menu = st.sidebar.radio(
     "Navigate Application", 
-    ["Market Segmentation", "Price-Tier Budget Explorer", "Similar Device Alternatives"]
+    ["Market Segmentation", "Segment Explorer", "Similar Device Alternatives"]
 )
 
 if menu == "Market Segmentation":
     st.subheader("📊 Strategic Product Clusters")
     # Interactive visualization using Plotly
     fig = px.scatter(product_df, x="avg_price", y="avg_rating", color="cluster_name",
-                     hover_data=["brand", "model"], title="Price vs Rating Segmented by Clusters",
-                     color_discrete_map={
-                         'Budget Workhorses': '#1f77b4',
-                         'Underperformers': '#d62728',
-                         'Premium Flagships': '#2ca02c',
-                         'Mid-Range Value': '#ff7f0e'
-                     })
+                     hover_data=["brand", "model"], title="Price vs Rating Segmented by ML Clusters")
     st.plotly_chart(fig, use_container_width=True)
     
     st.write("### Cluster Insights Table")
     st.dataframe(product_df.groupby('cluster_name').mean(numeric_only=True))
 
-elif menu == "Price-Tier Budget Explorer":
-    st.subheader("🔍 Price-Tier Budget Explorer")
-    st.write("Find the best-performing mobile devices grouped by pricing brackets.")
+elif menu == "Segment Explorer":
+    st.subheader("🔍 ML-Driven Segment Explorer")
+    st.write("Explore the automatically generated ML segments to find top devices.")
     
-    budget_choice = st.selectbox(
-        "Select your Budget Tier:", 
-        ["Premium", "Mid-Range", "Budget"],
-        index=1
+    available_clusters = product_df['cluster_name'].unique()
+    cluster_choice = st.selectbox(
+        "Select an ML Segment:", 
+        available_clusters
     )
     
-    # Display Price Tier Mark / Reference
-    if budget_choice == "Premium":
-        st.info("💡 **Premium Range Mark**: $1,000 and above")
-    elif budget_choice == "Mid-Range":
-        st.info("💡 **Mid-Range Range Mark**: $500 to $1,000")
-    else:
-        st.info("💡 **Budget Range Mark**: Under $500")
+    st.info(f"💡 Viewing devices classified by K-Means into: **{cluster_choice}**")
         
-    # Filter for High Quality phones in the chosen tier
-    explorer_df = product_df[
-        (product_df['price_tier'] == budget_choice) & 
-        (product_df['quality_label'] == 'High Quality')
-    ].copy()
+    # Filter for the chosen cluster
+    explorer_df = product_df[product_df['cluster_name'] == cluster_choice].copy()
     
     # Format and present results
     if not explorer_df.empty:
-        # Sort by rating and specifications score for quality sorting
+        # Sort by rating and specifications score to show best first
         explorer_df = explorer_df.sort_values(by=['avg_rating', 'avg_specs_score'], ascending=False)
         
         # Format metrics for clean display
@@ -82,10 +67,10 @@ elif menu == "Price-Tier Budget Explorer":
         
         display_df.columns = ['Brand', 'Model', 'Average Price', 'User Rating', 'Specifications Score', 'Positive Sentiment %', 'Segment']
         
-        st.write(f"### Top Performing Devices in the **{budget_choice}** segment:")
+        st.write(f"### Top Performing Devices in the **{cluster_choice}** segment:")
         st.dataframe(display_df, use_container_width=True)
     else:
-        st.warning(f"No high-performing devices found in the {budget_choice} segment.")
+        st.warning(f"No devices found in the {cluster_choice} segment.")
 
 elif menu == "Similar Device Alternatives":
     st.subheader("🎯 Intelligent Device Alternatives")
@@ -109,11 +94,11 @@ elif menu == "Similar Device Alternatives":
             
             # Format display df
             display_recs = recommendations.copy()
-            display_recs = display_recs.drop(columns=['price_tier'])
+            # price_tier drop removed because we don't return it anymore
             display_recs['avg_price'] = display_recs['avg_price'].map(lambda x: f"${x:,.2f}")
             display_recs['avg_rating'] = display_recs['avg_rating'].map(lambda x: f"{x:.2f} / 5.0")
             display_recs.columns = ['Brand', 'Model', 'Average Price', 'User Rating', 'Segment']
             
             st.dataframe(display_recs, use_container_width=True)
         else:
-            st.error("No high-performing recommendations could be found for this device.")
+            st.error("No recommendations could be found for this device.")
