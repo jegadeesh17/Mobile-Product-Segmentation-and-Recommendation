@@ -8,13 +8,9 @@ print("Running Data Cleaning...")
 engine = get_engine()
 df = pd.read_sql('SELECT * FROM raw_mobile_reviews', engine)
 
-# 2. Fix missing price_usd using model/brand medians (fall back to global median if still missing)
-df['price_usd'] = df.groupby(['brand', 'model'])['price_usd'].transform(lambda x: x.fillna(x.median()))
-df['price_usd'] = df['price_usd'].fillna(df['price_usd'].median())
-
-# 3. Fix missing ratings using model averages (fall back to global mean if still missing)
-df['rating'] = df.groupby('model')['rating'].transform(lambda x: x.fillna(x.mean()))
-df['rating'] = df['rating'].fillna(df['rating'].mean())
+# 2. Drop rows with missing critical information (price and rating)
+if 'rating' in df.columns and 'price_usd' in df.columns:
+    df = df.dropna(subset=['rating', 'price_usd'])
 
 # 4. Impute Missing Sentiment conditionally based on Rating
 def impute_sentiment(row):
