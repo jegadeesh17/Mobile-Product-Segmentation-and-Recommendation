@@ -101,3 +101,40 @@ def get_custom_recommendations(price, rating, specs, sentiment, top_n=5):
     res_df = product_df.iloc[recommended_indices][['brand', 'model', 'avg_price', 'avg_rating', 'cluster_name']].copy()
     
     return res_df
+
+
+def get_brand_price_recommendations(brand, target_price, top_n=5):
+    """
+    Get recommendations based on brand and price filters.
+    Optimizes for the highest quality specs, rating, and sentiment matching the target price.
+    """
+    # Filter by brand first
+    if brand != 'All':
+        filtered_df = product_df[product_df['brand'] == brand].copy()
+    else:
+        filtered_df = product_df.copy()
+        
+    if filtered_df.empty:
+        return filtered_df
+        
+    # We want the highest rating, spec score, and sentiment for the given price
+    max_rating = product_df['avg_rating'].max()
+    max_specs = product_df['avg_specs_score'].max()
+    max_sentiment = product_df['positive_sentiment_ratio'].max()
+    
+    import numpy as np
+    target_features = np.array([[target_price, max_rating, max_specs, max_sentiment]])
+    target_scaled = scaler.transform(target_features)
+    
+    # Scale features of the filtered products
+    X_filtered = filtered_df[features]
+    X_filtered_scaled = scaler.transform(X_filtered)
+    
+    # Calculate similarities
+    sim_scores = cosine_similarity(target_scaled, X_filtered_scaled)[0]
+    
+    # Sort and get top_n
+    filtered_df['similarity'] = sim_scores
+    res_df = filtered_df.sort_values(by='similarity', ascending=False).head(top_n)
+    
+    return res_df[['brand', 'model', 'avg_price', 'avg_rating', 'cluster_name']]

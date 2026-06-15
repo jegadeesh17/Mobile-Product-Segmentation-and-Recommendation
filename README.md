@@ -149,7 +149,12 @@ similarity_matrix = cosine_similarity(X_scaled)
 
 ### **Interactive Application Deployment**
 
-The project features an interactive **Streamlit Web Application** with Plotly market segmentation scatter plots, a price-tier budget explorer, and a live similarity recommendation engine.
+The project features an interactive **Streamlit Web Application** structured into four main modules:
+
+* **Market Clusters Overview:** Interactive Plotly scatter plots and statistical summaries visualizing the K-Means cluster segmentation.
+* **Device Segment Explorer:** A tool to browse and drill down into top-performing models within each ML-generated cluster.
+* **Similar Device Finder:** A recommendation tool to select a brand and model and find the top 5 most similar device alternatives using cosine similarity.
+* **Custom Recommendation Engine:** An intuitive matching engine where selecting a target brand (or "All") and a target price slider recommends the best quality options within the budget.
 
 #### **To Launch the Platform Locally:**
 ```powershell
