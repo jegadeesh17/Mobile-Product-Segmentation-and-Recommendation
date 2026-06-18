@@ -42,30 +42,16 @@ This project builds an end-to-end data science and unsupervised machine learning
 ### **Project Structure**
 
 ```bash
-Mobile-Product-Segmentation-and-Recommendation-System/
+MobileProductSegmentation/
 │
-├── data/                           # Raw smartphone review datasets
-│
-├── models/                         # Saved trained clustering models
-│
-├── docs/                           # Project documentation
-│
-├── reports/                        # Analytical reports and outputs
-│
-├── app/
-│   └── app.py                      # Streamlit dashboard application
-│
-├── src/
-│   ├── db_config.py                # Database connection configuration
-│   ├── data_ingestion.py           # CSV-to-PostgreSQL ingestion pipeline
-│   ├── data_cleaning.py            # Missing value imputation and cleaning
-│   ├── eda.py                      # Exploratory data analysis scripts
-│   ├── feature_engineering.py      # Composite scoring and product profiling
-│   ├── model_training.py           # K-Means clustering and persona mapping
-│   └── recommendation_engine.py   # Cosine similarity recommendation pipeline
-│
-├── project_presentation.ipynb     # Project summary notebook
-├── requirements.txt               # Python dependencies
+├── app/                          # Streamlit application files
+│   └── app.py                    # Main Streamlit dashboard
+├── data/                         # Project datasets
+├── docs/                         # Documentation and visualizations
+├── models/                       # Saved trained models
+├── notebooks/                    # Jupyter notebooks (Source of Truth)
+├── src/                          # Core Python logic and scripts
+├── requirements.txt              # Python dependencies
 └── README.md
 ```
 
@@ -158,7 +144,7 @@ The project features an interactive **Streamlit Web Application** structured int
 
 #### **To Launch the Platform Locally:**
 ```powershell
-python -m streamlit run app/app.py
+streamlit run app/app.py
 ```
 
 ---
@@ -184,7 +170,7 @@ python -m streamlit run app/app.py
 ```bash
 git clone https://github.com/jegadeesh17/Mobile-Product-Segmentation-and-Recommendation-System.git
 
-cd Mobile-Product-Segmentation-and-Recommendation-System
+cd MobileProductSegmentation
 ```
 
 ---
