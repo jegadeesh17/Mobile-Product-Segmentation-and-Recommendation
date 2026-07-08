@@ -26,6 +26,8 @@ This project builds an end-to-end data science and unsupervised machine learning
 ### **Dataset**
 
 * **Source:** Global Mobile Reviews Dataset
+* **In repo:** `raw_mobile_reviews_sample.csv`, `cleaned_mobile_reviews_sample.csv`, plus feature/segment CSVs
+* **Full data:** Place `raw_mobile_reviews.csv` in `data/` — see [data/DATA_SETUP.md](data/DATA_SETUP.md)
 * **Coverage:** Multi-brand smartphone products with customer reviews and specifications
 * **Format:** Raw CSV review records ingested into PostgreSQL
 
