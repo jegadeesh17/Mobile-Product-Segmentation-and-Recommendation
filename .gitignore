@@ -30,3 +30,10 @@ logs-*.txt
 *.pdf
 *.doc
 *.wpf
+
+# Large datasets (samples committed)
+data/Mobile Reviews Sentiment null.csv
+data/raw_mobile_reviews.csv
+data/cleaned_mobile_reviews.csv
+!data/raw_mobile_reviews_sample.csv
+!data/cleaned_mobile_reviews_sample.csv

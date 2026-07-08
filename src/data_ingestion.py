@@ -4,7 +4,13 @@ from pathlib import Path
 
 # Build path to data folder relative to this script
 DATA_DIR = Path(__file__).resolve().parent.parent / 'data'
-csv_path = DATA_DIR / 'Mobile Reviews Sentiment null.csv'
+
+def _resolve_csv(filename: str, sample_filename: str) -> Path:
+    full = DATA_DIR / filename
+    sample = DATA_DIR / sample_filename
+    return full if full.exists() else sample
+
+csv_path = _resolve_csv('raw_mobile_reviews.csv', 'raw_mobile_reviews_sample.csv')
 
 # Load raw CSV
 df = pd.read_csv(csv_path)
